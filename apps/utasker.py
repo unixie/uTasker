@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+"""uTasker application
+"""
+
+# === Imports and Globals ====================================================
+from pathlib import Path
+from types import MappingProxyType
+
+# Database
+import database as db
+from database import STATES, RECORD_FIELD_NAMES
+
+# TUI
+from rich.console import RenderableType
+from textual import on
+from textual.app import App, ComposeResult
+from textual.screen import Screen
+from textual.binding import Binding
+from textual.coordinate import Coordinate
+from textual.containers import Horizontal, Vertical, Container
+from textual.widgets import Header, Footer
+from textual.widgets import Rule
+from textual.widgets import DataTable
+from textual.widgets import Input
+from textual.widgets import Button
+from textual.widgets import TextArea
+from textual.widgets import RadioSet, RadioButton
+from textual.widgets import Checkbox
+from textual.widgets import Static
+
+# Order to display Record fields in DataTable columns
+COLUMNS = MappingProxyType(dict(zip(RECORD_FIELD_NAMES, range(len(RECORD_FIELD_NAMES)))))
+
+# Manually unfold for TUI
+COLUMN_WIDTHS = MappingProxyType(dict(
+    zip(RECORD_FIELD_NAMES,
+        [
+            5,      # ID
+            9,      # State
+            33,     # Title
+            None,   # Points
+            None,   # TimeSpent
+            60,     # Description
+            40      # Notes
+        ]
+    )
+))
+
+# === Classes and Functions ==================================================
+# --- TUI actions ------------------------------------------------------------
+# Actions update TUI and database together
+
+def act_add_row(
+        table : DataTable
+) -> None:
+    new_rec = db.new_record()
+    table.add_row(*new_rec.as_list(), key=new_rec.ID)
+
+def act_clone_row(
+        table : DataTable,
+        row_idx : int
+) -> None:
+    clone = table.get_row_at(row_idx)
+    clone_rec = db.new_record()
+    clone_rec.Title = "Clone of " + clone[COLUMNS["Title"]]
+    clone_rec.Points = clone[COLUMNS["Points"]]
+    clone_rec.Description = clone[COLUMNS["Description"]]
+    db.set_record(clone_rec)
+    table.add_row(*clone_rec.as_list(), key=clone_rec.ID)
+
+def act_update_row(
+        table : DataTable,
+        row_idx : int
+):
+    row = table.get_row_at(row_idx)
+    updated = db.get_record(row[COLUMNS["ID"]])
+    updated.State       = row[COLUMNS["State"]]
+    updated.Title       = row[COLUMNS["Title"]]
+    updated.Points      = row[COLUMNS["Points"]]
+    updated.TimeSpent   = row[COLUMNS["TimeSpent"]]
+    updated.Description = row[COLUMNS["Description"]]
+    updated.Notes       = row[COLUMNS["Notes"]]
+    db.set_record(updated)
+
+
+# --- Defunct, leaving as reference ------------------------------------------
+#UpdateableTaskFields = namedtuple('UpdateableTaskFields', DATASET_COLUMNS.task_updateable())
+#class TaskEdit(ModalScreen[UpdateableTaskFields]):
+#    def __init__(
+#        self,
+#        fields: UpdateableTaskFields,
+#        name: str = None,
+#        id: str = None,
+#        classes: str = None,
+#    ) -> None:
+#        self.fields = fields
+#        super().__init__(name=name, id=id, classes=classes)
+#
+#    def compose(self) -> ComposeResult:
+#        yield Container(
+#            Label("Title"),
+#            Input(id="TaskTitle", placeholder="Title"),
+#        )
+#        yield Container(
+#            Label("StoryPoints"),
+#            Input(id="TaskStoryPoints", placeholder="StoryPoints"),
+#        )
+#        yield Container(
+#            Label("Description"),
+#            TextArea(id="TaskDescription")
+#        )
+#        yield Container(
+#            Label(id="StateLabel"),
+#            Switch(id="State")
+#        )
+#        yield Button("Update", variant="primary", id="Update")
+#        yield Button("Cancel", variant="primary", id="Cancel")
+#
+#    def on_mount(self) -> None:
+#        inputter = self.query_one("#TaskTitle")
+#        inputter.value = str(self.fields.Title)
+#        inputter = self.query_one("#TaskStoryPoints")
+#        inputter.value = str(self.fields.StoryPoints)
+#        inputter = self.query_one("#TaskDescription")
+#        inputter.load_text(self.fields.Description)
+#        state_widget = self.query_one("#State")
+#        state_widget_label = self.query_one("#StateLabel")
+#        if STATES(self.fields.State) == STATES.BACKLOG:
+#            state_widget.value = False
+#            state_widget_label.update(STATES.BACKLOG.name)
+#        else:
+#            state_widget.value = True
+#            state_widget_label.update(STATES.UPCOMING.name)
+#
+#    def on_button_pressed(self, event: Button.Pressed) -> UpdateableTaskFields:
+#        if event.button.id == 'Update':
+#            self.dismiss(UpdateableTaskFields(
+#                Title=self.query_one("#TaskTitle").value,
+#                Points=self.query_one("#TaskStoryPoints").value,
+#                Description=self.query_one("#TaskDescription").text,
+#                State=STATES.UPCOMING.value if self.query_one("#State").value else STATES.BACKLOG.value
+#                ))
+#        else:
+#            self.dismiss(self.fields)
+#
+#    def on_switch_changed(self, event: Switch.Changed) -> None:
+#        state_widget_label = self.query_one("#StateLabel")
+#        state_widget_label.update(STATES.UPCOMING.value if event.value else STATES.BACKLOG.value)
+
+
+# === Screens ================================================================
+
+class Backlog(Screen):
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Footer()
+        yield DataTable(zebra_stripes=True, cursor_type="row", classes="TaskList")
+        yield Rule(line_style="heavy")
+        with Vertical(classes="TaskDetails"):
+            with Horizontal():
+                with Vertical(id="TaskDetailsLeft"):
+                    yield Input(placeholder="Points", classes="HBorder", id="HPoints")
+                    yield Checkbox(STATES.UPCOMING.name, id="HCheck")
+                with Vertical(id="TaskDetailsRight"):
+                    yield Input(placeholder="Title", classes="HBorder", id="HTitle")
+                    yield TextArea(classes="HBorder", id="HDescription")
+                    yield TextArea(classes="HBorder", id="HNotes")
+            with Horizontal(classes="BottomButtons"):
+                yield Button("Update", variant="primary", id="Update")
+                yield Button("Add", variant="primary", id="Add")
+                yield Button("Clone", variant="primary", id="Clone")
+
+    def on_mount(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.border_title = "Backlog"
+        for label,width in COLUMN_WIDTHS.items():
+            table.add_column(label=label,width=width)
+        element = self.query(".HBorder")
+        for e,t in zip(element, ["Points", "Title", "Description", "Notes"]):
+            e.border_title = t
+
+    def on_screen_resume(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.clear()
+        for data in db.view_dataset([STATES.BACKLOG, STATES.UPCOMING]):
+            table.add_row(*data.as_list(), key=data.ID)
+
+    @on(DataTable.RowHighlighted, ".TaskList")
+    def fill_details(
+            self,
+            message: DataTable.RowHighlighted
+    ) -> None:
+        message.stop()
+        table = message.control
+        self.highlighted_row = message.cursor_row
+        record = table.get_row_at(self.highlighted_row)
+        self.query_one("#HPoints").value = str(record[COLUMNS["Points"]])
+        self.query_one("#HCheck").value = (record[COLUMNS["State"]] == STATES.UPCOMING)
+        self.query_one("#HTitle").value = record[COLUMNS["Title"]]
+        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        if event.button.id == 'Update':
+            # Update TUI with new state, since tied to concrete elements
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Title"]),
+                                 value=self.query_one("#HTitle").value)
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Points"]),
+                                 value=self.query_one("#HPoints").value)
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
+                                 value=self.query_one("#HDescription").text)
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Notes"]),
+                                 value=self.query_one("#HNotes").text)
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
+                                 value = STATES.UPCOMING if self.query_one("#HCheck").value else STATES.BACKLOG)
+            # Update underlying database from up to date Datatable
+            act_update_row(table=table, row_idx=self.highlighted_row)
+        elif event.button.id == 'Add':
+            act_add_row(table=table)
+            table.move_cursor(row=table.row_count - 1)
+        elif event.button.id == 'Clone':
+            act_clone_row(table=table, row_idx=self.highlighted_row)
+            table.move_cursor(row=table.row_count - 1)
+        else:
+            raise ValueError("Unknown button id")
+
+    #@on(DataTable.RowSelected, ".TaskList")
+#    def do_me(
+#        self,
+#        message : DataTable.RowSelected
+#    ) -> None:
+#        updateable_cols = [DATASET_COLUMNS[v].value for v in DATASET_COLUMNS.task_updateable()]
+#
+#        def update_tasks(new_fields : UpdateableTaskFields) -> None:
+#            table = self.query_one('.TaskList', DataTable)
+#            for col, val in zip(updateable_cols, [new_fields.Title, new_fields.Points, new_fields.Description, new_fields.State]):
+#                table.update_cell_at(coordinate=Coordinate(row=message.cursor_row, column=col), value=val)
+#
+#        message.stop()
+#        table = message.control
+#        fields = [
+#            table.get_cell_at(coordinate=Coordinate(row=message.cursor_row, column=col))
+#            for col in updateable_cols
+#        ]
+#        self.app.push_screen(TaskEdit(UpdateableTaskFields._make(fields)), callback=update_tasks)
+#
+
+class TimeSpent(Static):
+    already_spent: float = 0.0
+
+    def update(self, renderable: RenderableType = "") -> bool:
+        if float(str(renderable)) >= self.already_spent:
+            super().update(renderable)
+            return True
+        else:
+            return False
+
+    def set_already_spent(self, initial):
+        self.already_spent = initial
+        self.update(str(self.already_spent))
+
+
+class Workbench(Screen):
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Footer()
+        yield DataTable(zebra_stripes=True, cursor_type="row", classes="TaskList")
+        yield Rule(line_style="heavy")
+        with Vertical(classes="TaskDetails"):
+            with Horizontal():
+                with Container(id="TaskDetailsLeft"):
+                    with Vertical(id="TimeSpentBox", classes="HBorder"):
+                        yield TimeSpent(markup=False, id="TimeSpent")
+                        yield Button("-0.5", id="dec")
+                        yield Button("+0.5", id="inc")
+                    yield RadioSet(*STATES.as_list(), id="TaskStates")
+                with Vertical(id="TaskDetailsRight"):
+                    yield Input(placeholder="Title", classes="HBorder", id="HTitle")
+                    yield TextArea(classes="HBorder", id="HDescription")
+                    yield TextArea(classes="HBorder", id="HNotes")
+            with Horizontal(classes="BottomButtons"):
+                yield Button("Update", variant="primary", id="Update")
+                yield Button("Tidy", variant="primary", id="Tidy")
+
+    def on_mount(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.border_title = "Workbench"
+        for label,width in COLUMN_WIDTHS.items():
+            table.add_column(label=label,width=width)
+        element = self.query(".HBorder")
+        for e,t in zip(element, ["Time Spent", "Title", "Description", "Notes"]):
+            e.border_title = t
+
+    def on_screen_resume(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.clear()
+        for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
+            table.add_row(*data.as_list(), key=data.ID)
+
+    @on(DataTable.RowHighlighted, ".TaskList")
+    def fill_details(
+            self,
+            message: DataTable.RowHighlighted
+    ) -> None:
+        message.stop()
+        table = message.control
+        self.highlighted_row = message.cursor_row
+        record = table.get_row_at(self.highlighted_row)
+        self.query_one("#TimeSpent").set_already_spent(record[COLUMNS["TimeSpent"]])
+        self.query_one("#HTitle").value = record[COLUMNS["Title"]]
+        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
+
+        radioset = self.query_one("#TaskStates")
+        buttons = list(radioset.query(RadioButton))
+        idx = STATES.index(record[COLUMNS["State"]])
+        buttons[idx].value = True
+
+    @on(Button.Pressed, "#Update")
+    def update_button_pressed(
+        self,
+        message: Button.Pressed
+    ) -> None:
+        message.stop()
+        table = self.query_one(".TaskList", DataTable)
+        # Update TUI with new state, since tied to concrete elements
+        spent = float(str(self.query_one("#TimeSpent").renderable))
+        self.query_one("#TimeSpent").set_already_spent(spent)
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["TimeSpent"]),
+                                value=spent)
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Title"]),
+                                value=self.query_one("#HTitle").value)
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
+                                value=self.query_one("#HDescription").text)
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Notes"]),
+                                value=self.query_one("#HNotes").text)
+        radioset = self.query_one("#TaskStates")
+        buttons = list(radioset.query(RadioButton))
+        idx = radioset.pressed_index
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
+                                value = STATES(str(buttons[idx].label)))
+        # Update underlying database from up to date Datatable
+        act_update_row(table=table, row_idx=self.highlighted_row)
+
+    @on(Button.Pressed, "#inc")
+    def inc(self):
+        points = self.query_one("#TimeSpent")
+        value = float(str(points.render())) + 0.5
+        points.update(str(value))
+
+    @on(Button.Pressed, "#dec")
+    def dec(self):
+        points = self.query_one("#TimeSpent")
+        value = float(str(points.render())) - 0.5
+        if not points.update(str(value)): self.app.bell()
+
+    @on(Button.Pressed, "#Tidy")
+    def tidy_button_pressed(
+        self,
+        message: Button.Pressed
+    ) -> None:
+        message.stop()
+        table = self.query_one(".TaskList", DataTable)
+        table.clear()
+        for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
+            table.add_row(*data.as_list(), key=data.ID)
+
+
+class Archive(Screen):
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Footer()
+        yield DataTable(zebra_stripes=True, cursor_type="row", classes="TaskList")
+        yield Rule(line_style="heavy")
+        with Vertical(classes="TaskDetails"):
+            with Horizontal():
+                with Vertical(id="TaskDetailsLeft"):
+                    yield Static()
+                with Vertical(id="TaskDetailsRight"):
+                    yield Input(placeholder="Title", classes="HBorder", id="HTitle", disabled=True)
+                    yield TextArea(classes="HBorder", id="HDescription", disabled=True)
+                    yield TextArea(classes="HBorder", id="HNotes")
+            with Horizontal(classes="BottomButtons"):
+                yield Button("Clone to Backlog", variant="primary", id="Clone")
+
+    def on_mount(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.border_title = "Archive"
+        for label,width in COLUMN_WIDTHS.items():
+            table.add_column(label=label,width=width)
+        element = self.query(".HBorder")
+        for e,t in zip(element, ["Title", "Description", "Notes"]):
+            e.border_title = t
+
+    def on_screen_resume(self) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        table.clear()
+        for data in db.view_dataset([STATES.CANCELLED, STATES.DONE]):
+            table.add_row(*data.as_list(), key=data.ID)
+
+    @on(DataTable.RowHighlighted, ".TaskList")
+    def fill_details(
+            self,
+            message: DataTable.RowHighlighted
+    ) -> None:
+        message.stop()
+        table = message.control
+        self.highlighted_row = message.cursor_row
+        record = table.get_row_at(self.highlighted_row)
+        self.query_one("#HTitle").value = record[COLUMNS["Title"]]
+        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        table = self.query_one(".TaskList", DataTable)
+        act_clone_row(table=table, row_idx=self.highlighted_row)
+        table.move_cursor(row=table.row_count - 1)
+
+
+# === TUI App ================================================================
+class uTaskerApp(App):
+
+    CSS_PATH = "utasker.tcss"
+    TITLE = "uTasker"
+    SUB_TITLE = "Micro Task Manager"
+    ENABLE_COMMAND_PALETTE = False
+    BINDINGS = [
+        Binding(key="q", action="quit", description="Quit the app"),
+        Binding(key="b", action="switch_mode('Backlog')", description="Backlog"),
+        Binding(key="w", action="switch_mode('Workbench')", description="Workbench"),
+        Binding(key="a", action="switch_mode('Archive')", description="Archive"),
+    ]
+    MODES = {
+        "Backlog" : Backlog,
+        "Workbench" : Workbench,
+        "Archive" : Archive,
+    }
+
+    def on_mount(self) -> None:
+        self.switch_mode("Backlog")
+
+
+# === Command Line Interface =================================================
+if __name__ == "__main__":
+    import argparse
+
+    desc = __doc__ + '''\n
+    '''
+    epi = '''
+    '''
+    # Merge several help formatters
+    class MyFormatter(argparse.RawDescriptionHelpFormatter,
+                      argparse.ArgumentDefaultsHelpFormatter):
+        pass
+
+    parser = argparse.ArgumentParser(description=desc, epilog=epi,
+                                     formatter_class=MyFormatter)
+
+
+    # --- Options ------------------------------------------------------------
+    options = parser.add_argument_group("Options")
+    options.add_argument(
+        "--file",
+        "-f",
+        type = str,
+        default = None,
+        help = "Path to database file. None for in-memory, '' for temp file, both without persistence"
+    )
+
+    debugs = parser.add_argument_group("Debug options")
+    debugs.add_argument(
+        "--simple",
+        "-s",
+        default = False,
+        action="store_true",
+        help = "Use a simple in-memory list based database instead of SQLite"
+    )
+
+    # --- Argument validation ------------------------------------------------
+    args = parser.parse_args()
+    if args.simple:
+        db.select_api(True)
+        # TODO: figure out how to update the function pointers
+
+    # --- Application --------------------------------------------------------
+    db.load(args.file)
+    app = uTaskerApp()
+    app.run()

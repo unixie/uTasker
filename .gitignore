@@ -1,0 +1,8 @@
+*.swp
+*.pyc
+*~
+.ipynb_checkpoints/
+*venv/
+*vscode/
+*build/
+*install/

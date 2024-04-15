@@ -1,0 +1,95 @@
+Screen {
+    layout: vertical;
+}
+
+Button {
+    margin: 0 6;
+}
+
+Rule {
+    color: $accent;
+}
+
+/* Divide Screen into List and Details */
+.TaskList {
+    height: 3fr;
+    padding: 1;
+    border: solid $primary;
+    border-title-color: $secondary;
+    border-title-background: $primary;
+    border-title-align: center;
+    border-title-style: bold;
+}
+.TaskDetails {
+    height: 2fr;
+}
+.BottomButtons {
+    height: 5;
+    align: center middle;
+}
+
+/* Common styling */
+.CenterContent {
+    align: center middle;
+    height: auto;
+}
+.HBorder {
+    border: solid $primary;
+    border-title-color: $secondary;
+}
+
+/* Highlighted (details) elements */
+#HTaskDetailsBox {
+    height: auto;
+}
+#HTitle {
+    width: 1fr;
+}
+
+/* Split Details horizontally */
+$left_side: 20;
+
+#TaskDetailsLeft {
+    width: $left_side;
+}
+
+#TaskDetailsRight {
+    width: 1fr;
+}
+
+#TaskDetailsRight > Horizontal {
+    content-align: center middle;
+}
+
+#HPoints {
+    width: $left_side;
+}
+
+#HCheck {
+    width: $left_side;
+    border: none;
+    offset: 0 1;
+    color: $secondary;
+}
+
+#TimeSpentBox {
+    width: $left_side;
+    layout: grid;
+    grid-size: 2 2;
+    offset-y: 0;
+}
+#TimeSpentBox > TimeSpent {
+    column-span: 2;
+    content-align: center middle;
+    height: 1fr;
+}
+#TimeSpentBox > Button {
+    margin: 0 0;
+    width: auto;
+    color: $secondary;
+}
+
+#TaskStates {
+    width: $left_side;
+    color: $secondary;
+}
