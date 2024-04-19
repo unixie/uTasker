@@ -24,17 +24,34 @@ INSERT OR IGNORE INTO States (StateName)
         ('CANCELLED')
 ;
 
+-- Epics is a reference table
+CREATE TABLE IF NOT EXISTS Epics (
+    EpicName   TEXT NOT NULL UNIQUE
+);
+-- Fill
+INSERT OR IGNORE INTO Epics (EpicName)
+    VALUES
+        ('-'),
+        ('Feature'),
+        ('Fix')
+;
+
 
 -- Tasks is the foundation table
 CREATE TABLE IF NOT EXISTS Tasks (
     ID          INTEGER PRIMARY KEY,
     State       TEXT NOT NULL DEFAULT 'BACKLOG',
+    Epic        TEXT NOT NULL DEFAULT '-',
     Title       TEXT NOT NULL DEFAULT 'New Task',
     Points      INTEGER CHECK (Points > 0) DEFAULT 1,
     TimeSpent   REAL DEFAULT 0,
-    Description TEXT DEFAULT 'TBA',
+    Details     TEXT DEFAULT 'TBA',
     FOREIGN KEY (State)
     REFERENCES States (StateName)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+    FOREIGN KEY (Epic)
+    REFERENCES Epics (EpicName)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -62,7 +79,7 @@ CREATE VIEW IF NOT EXISTS Sprint AS
         ID,
         State,
         Title,
-        Description,
+        Details,
         Points,
         TimeSpent
     FROM

@@ -46,10 +46,11 @@ class Record:
     """Record of a task"""
     ID : int
     State : STATES = STATES.default()
+    Epic : str = "-"
     Title : str = "New Task"
     Points : int = 1
     TimeSpent : float = 0.0
-    Description : str = "TBA"
+    Details : str = "TBA"
 
     def as_list(self):
         return list(self.__dict__.values())
@@ -92,10 +93,11 @@ def _set_record(
     UPDATE Tasks
     SET
         State = ?,
+        Epic = ?,
         Title = ?,
         Points = ?,
         TimeSpent = ?,
-        Description = ?
+        Details = ?
     WHERE
         ID = ?
     ;""",
@@ -146,6 +148,23 @@ def _load(
 
 def _store():
     _CON.close()
+
+def get_epics() -> set[str]:
+    cur = _CON.cursor()
+    res = cur.execute("SELECT * FROM Epics;")
+    row = res.fetchall()
+    return {x[0] for x in row}
+
+def update_epics(
+        live : set[str]
+) -> None:
+    stored = get_epics()
+    assert stored <= live
+    additions = live - stored
+    if len(additions) > 0:
+        cur = _CON.cursor()
+        cmd = "INSERT INTO Epics (EpicName) VALUES (?)"
+        cur.executemany(cmd, [(s,) for s in additions])
 
 
 # --- Simple backend for development instead of proper DB --------------------

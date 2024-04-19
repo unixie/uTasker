@@ -37,10 +37,11 @@ COLUMN_WIDTHS = MappingProxyType(dict(
         [
             5,      # ID
             9,      # State
+            10,     # Epic
             33,     # Title
             None,   # Points
             None,   # TimeSpent
-            60,     # Description
+            60,     # Details
         ]
     )
 ))
@@ -62,8 +63,9 @@ def act_clone_row(
     clone = table.get_row_at(row_idx)
     clone_rec = db.new_record()
     clone_rec.Title = "Clone of " + clone[COLUMNS["Title"]]
+    clone_rec.Epic = clone[COLUMNS["Epic"]]
     clone_rec.Points = clone[COLUMNS["Points"]]
-    clone_rec.Description = clone[COLUMNS["Description"]]
+    clone_rec.Details = clone[COLUMNS["Details"]]
     db.set_record(clone_rec)
     table.add_row(*clone_rec.as_list(), key=clone_rec.ID)
 
@@ -74,10 +76,11 @@ def act_update_row(
     row = table.get_row_at(row_idx)
     updated = db.get_record(row[COLUMNS["ID"]])
     updated.State       = row[COLUMNS["State"]]
+    updated.Epic        = row[COLUMNS["Epic"]]
     updated.Title       = row[COLUMNS["Title"]]
     updated.Points      = row[COLUMNS["Points"]]
     updated.TimeSpent   = row[COLUMNS["TimeSpent"]]
-    updated.Description = row[COLUMNS["Description"]]
+    updated.Details     = row[COLUMNS["Details"]]
     db.set_record(updated)
 
 # === Screens ================================================================
@@ -93,10 +96,11 @@ class Backlog(Screen):
             with Horizontal():
                 with Vertical(id="TaskDetailsLeft"):
                     yield Input(placeholder="Points", classes="HBorder", id="HPoints")
+                    yield RadioSet(*sorted(db.get_epics()), classes="HBorder", id="HEpics")
                     yield Checkbox(STATES.UPCOMING.name, id="HCheck")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
-                    yield TextArea(classes="HBorder", id="HDescription")
+                    yield TextArea(classes="HBorder", id="HDetails")
             with Horizontal(classes="BottomButtons"):
                 yield Button("Update", variant="primary", id="Update")
                 yield Button("Add", variant="primary", id="Add")
@@ -108,7 +112,7 @@ class Backlog(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Points", "Title", "Description"]):
+        for e,t in zip(element, ["Points", "Epic", "Title", "Details"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -129,7 +133,11 @@ class Backlog(Screen):
         self.query_one("#HPoints").value = str(record[COLUMNS["Points"]])
         self.query_one("#HCheck").value = (record[COLUMNS["State"]] == STATES.UPCOMING)
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
-        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HDetails").text = record[COLUMNS["Details"]]
+        radioset = self.query_one("#HEpics")
+        buttons = list(radioset.query(RadioButton))
+        idx = sorted(db.get_epics()).index(record[COLUMNS["Epic"]])
+        buttons[idx].value = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(".TaskList", DataTable)
@@ -139,10 +147,15 @@ class Backlog(Screen):
                                  value=self.query_one("#HTitle").value)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Points"]),
                                  value=self.query_one("#HPoints").value)
-            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
-                                 value=self.query_one("#HDescription").text)
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Details"]),
+                                 value=self.query_one("#HDetails").text)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
                                  value = STATES.UPCOMING if self.query_one("#HCheck").value else STATES.BACKLOG)
+            radioset = self.query_one("#HEpics")
+            buttons = list(radioset.query(RadioButton))
+            idx = radioset.pressed_index
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Epic"]),
+                                    value = str(buttons[idx].label))
             # Update underlying database from up to date Datatable
             act_update_row(table=table, row_idx=self.highlighted_row)
         elif event.button.id == 'Add':
@@ -187,7 +200,7 @@ class Workbench(Screen):
                     yield RadioSet(*STATES.as_list(), id="TaskStates")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
-                    yield TextArea(classes="HBorder", id="HDescription")
+                    yield TextArea(classes="HBorder", id="HDetails")
             with Horizontal(classes="BottomButtons"):
                 yield Button("Update", variant="primary", id="Update")
                 yield Button("Tidy", variant="primary", id="Tidy")
@@ -198,7 +211,7 @@ class Workbench(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Time Spent", "Title", "Description"]):
+        for e,t in zip(element, ["Time Spent", "Title", "Details"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -218,7 +231,7 @@ class Workbench(Screen):
         record = table.get_row_at(self.highlighted_row)
         self.query_one("#TimeSpent").set_already_spent(record[COLUMNS["TimeSpent"]])
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
-        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HDetails").text = record[COLUMNS["Details"]]
 
         radioset = self.query_one("#TaskStates")
         buttons = list(radioset.query(RadioButton))
@@ -239,8 +252,8 @@ class Workbench(Screen):
                                 value=spent)
         table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Title"]),
                                 value=self.query_one("#HTitle").value)
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
-                                value=self.query_one("#HDescription").text)
+        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Details"]),
+                                value=self.query_one("#HDetails").text)
         radioset = self.query_one("#TaskStates")
         buttons = list(radioset.query(RadioButton))
         idx = radioset.pressed_index
@@ -286,7 +299,7 @@ class Archive(Screen):
                     yield Static()
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle", disabled=True)
-                    yield TextArea(classes="HBorder", id="HDescription", disabled=True)
+                    yield TextArea(classes="HBorder", id="HDetails", disabled=True)
             with Horizontal(classes="BottomButtons"):
                 yield Button("Clone to Backlog", variant="primary", id="Clone")
 
@@ -296,7 +309,7 @@ class Archive(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Title", "Description"]):
+        for e,t in zip(element, ["Title", "Details"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -315,7 +328,7 @@ class Archive(Screen):
         self.highlighted_row = message.cursor_row
         record = table.get_row_at(self.highlighted_row)
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
-        self.query_one("#HDescription").text = record[COLUMNS["Description"]]
+        self.query_one("#HDetails").text = record[COLUMNS["Details"]]
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(".TaskList", DataTable)
@@ -373,20 +386,8 @@ if __name__ == "__main__":
         help = "Path to database file. None for in-memory, '' for temp file, both without persistence"
     )
 
-#    debugs = parser.add_argument_group("Debug options")
-#    debugs.add_argument(
-#        "--simple",
-#        "-s",
-#        default = False,
-#        action="store_true",
-#        help = "Use a simple in-memory list based database instead of SQLite"
-#    )
-
     # --- Argument validation ------------------------------------------------
     args = parser.parse_args()
-    # TODO: figure out how to update the function pointers in runtime
-#    if args.simple:
-#        db.select_api(True)
 
     # --- Application --------------------------------------------------------
     db.load(args.file)
