@@ -133,12 +133,13 @@ def _load(
             schema_str = file.read()
         cur = _CON.cursor()  # default cursor for general operations
         cur.executescript(schema_str)
-        for i in range(3):
+        for i in range(3):  # TODO: remove eventually
             res = _DCUR.execute("""INSERT INTO Tasks DEFAULT VALUES;""")
 
+    # One time preparation
     if dbfile is None:
         _prepare_db()
-    elif os.path.getsize(dbfile) == 0:
+    elif os.path.getsize(dbfile) == 0:  # file already exists
         _prepare_db()
     else:
         pass

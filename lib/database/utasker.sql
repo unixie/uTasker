@@ -59,16 +59,16 @@ END;
 -- Workbench is a dynamic view
 CREATE VIEW IF NOT EXISTS Sprint AS
     SELECT
-        TaskID,
+        ID,
+        State,
         Title,
         Description,
-        StoryPoints,
-        TimeSpent,
-        State
+        Points,
+        TimeSpent
     FROM
         Tasks
     WHERE
-        State IN ('UPCOMING', 'IN PROGRESS', 'REVIEW')
+        State IN ('UPCOMING', 'ACTIVE', 'REVIEW')
     ORDER BY
         State
 ;

@@ -80,74 +80,9 @@ def act_update_row(
     updated.Description = row[COLUMNS["Description"]]
     db.set_record(updated)
 
-
-# --- Defunct, leaving as reference ------------------------------------------
-#UpdateableTaskFields = namedtuple('UpdateableTaskFields', DATASET_COLUMNS.task_updateable())
-#class TaskEdit(ModalScreen[UpdateableTaskFields]):
-#    def __init__(
-#        self,
-#        fields: UpdateableTaskFields,
-#        name: str = None,
-#        id: str = None,
-#        classes: str = None,
-#    ) -> None:
-#        self.fields = fields
-#        super().__init__(name=name, id=id, classes=classes)
-#
-#    def compose(self) -> ComposeResult:
-#        yield Container(
-#            Label("Title"),
-#            Input(id="TaskTitle", placeholder="Title"),
-#        )
-#        yield Container(
-#            Label("StoryPoints"),
-#            Input(id="TaskStoryPoints", placeholder="StoryPoints"),
-#        )
-#        yield Container(
-#            Label("Description"),
-#            TextArea(id="TaskDescription")
-#        )
-#        yield Container(
-#            Label(id="StateLabel"),
-#            Switch(id="State")
-#        )
-#        yield Button("Update", variant="primary", id="Update")
-#        yield Button("Cancel", variant="primary", id="Cancel")
-#
-#    def on_mount(self) -> None:
-#        inputter = self.query_one("#TaskTitle")
-#        inputter.value = str(self.fields.Title)
-#        inputter = self.query_one("#TaskStoryPoints")
-#        inputter.value = str(self.fields.StoryPoints)
-#        inputter = self.query_one("#TaskDescription")
-#        inputter.load_text(self.fields.Description)
-#        state_widget = self.query_one("#State")
-#        state_widget_label = self.query_one("#StateLabel")
-#        if STATES(self.fields.State) == STATES.BACKLOG:
-#            state_widget.value = False
-#            state_widget_label.update(STATES.BACKLOG.name)
-#        else:
-#            state_widget.value = True
-#            state_widget_label.update(STATES.UPCOMING.name)
-#
-#    def on_button_pressed(self, event: Button.Pressed) -> UpdateableTaskFields:
-#        if event.button.id == 'Update':
-#            self.dismiss(UpdateableTaskFields(
-#                Title=self.query_one("#TaskTitle").value,
-#                Points=self.query_one("#TaskStoryPoints").value,
-#                Description=self.query_one("#TaskDescription").text,
-#                State=STATES.UPCOMING.value if self.query_one("#State").value else STATES.BACKLOG.value
-#                ))
-#        else:
-#            self.dismiss(self.fields)
-#
-#    def on_switch_changed(self, event: Switch.Changed) -> None:
-#        state_widget_label = self.query_one("#StateLabel")
-#        state_widget_label.update(STATES.UPCOMING.value if event.value else STATES.BACKLOG.value)
-
-
 # === Screens ================================================================
 
+# --- Backlog: Add new tasks here --------------------------------------------
 class Backlog(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
@@ -219,27 +154,8 @@ class Backlog(Screen):
         else:
             raise ValueError("Unknown button id")
 
-    #@on(DataTable.RowSelected, ".TaskList")
-#    def do_me(
-#        self,
-#        message : DataTable.RowSelected
-#    ) -> None:
-#        updateable_cols = [DATASET_COLUMNS[v].value for v in DATASET_COLUMNS.task_updateable()]
-#
-#        def update_tasks(new_fields : UpdateableTaskFields) -> None:
-#            table = self.query_one('.TaskList', DataTable)
-#            for col, val in zip(updateable_cols, [new_fields.Title, new_fields.Points, new_fields.Description, new_fields.State]):
-#                table.update_cell_at(coordinate=Coordinate(row=message.cursor_row, column=col), value=val)
-#
-#        message.stop()
-#        table = message.control
-#        fields = [
-#            table.get_cell_at(coordinate=Coordinate(row=message.cursor_row, column=col))
-#            for col in updateable_cols
-#        ]
-#        self.app.push_screen(TaskEdit(UpdateableTaskFields._make(fields)), callback=update_tasks)
-#
 
+# --- Workbench: Tasks receiving attention -----------------------------------
 class TimeSpent(Static):
     already_spent: float = 0.0
 
@@ -357,6 +273,7 @@ class Workbench(Screen):
             table.add_row(*data.as_list(), key=data.ID)
 
 
+# --- Archive: Retired tasks -------------------------------------------------
 class Archive(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
@@ -456,20 +373,20 @@ if __name__ == "__main__":
         help = "Path to database file. None for in-memory, '' for temp file, both without persistence"
     )
 
-    debugs = parser.add_argument_group("Debug options")
-    debugs.add_argument(
-        "--simple",
-        "-s",
-        default = False,
-        action="store_true",
-        help = "Use a simple in-memory list based database instead of SQLite"
-    )
+#    debugs = parser.add_argument_group("Debug options")
+#    debugs.add_argument(
+#        "--simple",
+#        "-s",
+#        default = False,
+#        action="store_true",
+#        help = "Use a simple in-memory list based database instead of SQLite"
+#    )
 
     # --- Argument validation ------------------------------------------------
     args = parser.parse_args()
-    if args.simple:
-        db.select_api(True)
-        # TODO: figure out how to update the function pointers
+    # TODO: figure out how to update the function pointers in runtime
+#    if args.simple:
+#        db.select_api(True)
 
     # --- Application --------------------------------------------------------
     db.load(args.file)
