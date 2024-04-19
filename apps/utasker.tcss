@@ -12,7 +12,7 @@ Rule {
 
 /* Divide Screen into List and Details */
 .TaskList {
-    height: 3fr;
+    height: 1fr;
     padding: 1;
     border: solid $primary;
     border-title-color: $secondary;
@@ -21,7 +21,7 @@ Rule {
     border-title-style: bold;
 }
 .TaskDetails {
-    height: 2fr;
+    height: 1fr;
 }
 .BottomButtons {
     height: 5;
