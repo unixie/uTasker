@@ -50,7 +50,6 @@ class Record:
     Points : int = 1
     TimeSpent : float = 0.0
     Description : str = "TBA"
-    Notes : str = "None"
 
     def as_list(self):
         return list(self.__dict__.values())
@@ -96,8 +95,7 @@ def _set_record(
         Title = ?,
         Points = ?,
         TimeSpent = ?,
-        Description = ?,
-        Notes = ?
+        Description = ?
     WHERE
         ID = ?
     ;""",

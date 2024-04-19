@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS Tasks (
     Points      INTEGER CHECK (Points > 0) DEFAULT 1,
     TimeSpent   REAL DEFAULT 0,
     Description TEXT DEFAULT 'TBA',
-    Notes       TEXT DEFAULT 'None',
     FOREIGN KEY (State)
     REFERENCES States (StateName)
         ON DELETE RESTRICT

@@ -41,7 +41,6 @@ COLUMN_WIDTHS = MappingProxyType(dict(
             None,   # Points
             None,   # TimeSpent
             60,     # Description
-            40      # Notes
         ]
     )
 ))
@@ -79,7 +78,6 @@ def act_update_row(
     updated.Points      = row[COLUMNS["Points"]]
     updated.TimeSpent   = row[COLUMNS["TimeSpent"]]
     updated.Description = row[COLUMNS["Description"]]
-    updated.Notes       = row[COLUMNS["Notes"]]
     db.set_record(updated)
 
 
@@ -164,7 +162,6 @@ class Backlog(Screen):
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
                     yield TextArea(classes="HBorder", id="HDescription")
-                    yield TextArea(classes="HBorder", id="HNotes")
             with Horizontal(classes="BottomButtons"):
                 yield Button("Update", variant="primary", id="Update")
                 yield Button("Add", variant="primary", id="Add")
@@ -176,7 +173,7 @@ class Backlog(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Points", "Title", "Description", "Notes"]):
+        for e,t in zip(element, ["Points", "Title", "Description"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -198,7 +195,6 @@ class Backlog(Screen):
         self.query_one("#HCheck").value = (record[COLUMNS["State"]] == STATES.UPCOMING)
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
         self.query_one("#HDescription").text = record[COLUMNS["Description"]]
-        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(".TaskList", DataTable)
@@ -210,8 +206,6 @@ class Backlog(Screen):
                                  value=self.query_one("#HPoints").value)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
                                  value=self.query_one("#HDescription").text)
-            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Notes"]),
-                                 value=self.query_one("#HNotes").text)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
                                  value = STATES.UPCOMING if self.query_one("#HCheck").value else STATES.BACKLOG)
             # Update underlying database from up to date Datatable
@@ -278,7 +272,6 @@ class Workbench(Screen):
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
                     yield TextArea(classes="HBorder", id="HDescription")
-                    yield TextArea(classes="HBorder", id="HNotes")
             with Horizontal(classes="BottomButtons"):
                 yield Button("Update", variant="primary", id="Update")
                 yield Button("Tidy", variant="primary", id="Tidy")
@@ -289,7 +282,7 @@ class Workbench(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Time Spent", "Title", "Description", "Notes"]):
+        for e,t in zip(element, ["Time Spent", "Title", "Description"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -310,7 +303,6 @@ class Workbench(Screen):
         self.query_one("#TimeSpent").set_already_spent(record[COLUMNS["TimeSpent"]])
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
         self.query_one("#HDescription").text = record[COLUMNS["Description"]]
-        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
 
         radioset = self.query_one("#TaskStates")
         buttons = list(radioset.query(RadioButton))
@@ -333,8 +325,6 @@ class Workbench(Screen):
                                 value=self.query_one("#HTitle").value)
         table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Description"]),
                                 value=self.query_one("#HDescription").text)
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Notes"]),
-                                value=self.query_one("#HNotes").text)
         radioset = self.query_one("#TaskStates")
         buttons = list(radioset.query(RadioButton))
         idx = radioset.pressed_index
@@ -380,7 +370,6 @@ class Archive(Screen):
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle", disabled=True)
                     yield TextArea(classes="HBorder", id="HDescription", disabled=True)
-                    yield TextArea(classes="HBorder", id="HNotes")
             with Horizontal(classes="BottomButtons"):
                 yield Button("Clone to Backlog", variant="primary", id="Clone")
 
@@ -390,7 +379,7 @@ class Archive(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Title", "Description", "Notes"]):
+        for e,t in zip(element, ["Title", "Description"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -410,7 +399,6 @@ class Archive(Screen):
         record = table.get_row_at(self.highlighted_row)
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
         self.query_one("#HDescription").text = record[COLUMNS["Description"]]
-        self.query_one("#HNotes").text = record[COLUMNS["Notes"]]
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(".TaskList", DataTable)
