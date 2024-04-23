@@ -66,11 +66,19 @@ CREATE TRIGGER IF NOT EXISTS InsertTaskState
     END;
 END;
 
-CREATE TRIGGER IF NOT EXISTS UpdateTaskState
+CREATE TRIGGER IF NOT EXISTS UpdateTaskStateDone
     BEFORE UPDATE ON Tasks
     BEGIN
         SELECT CASE WHEN OLD.State = 'DONE' THEN
             RAISE (ABORT, 'Can not change state of DONE task')
+    END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS UpdateTaskStateCancelled
+    BEFORE UPDATE ON Tasks
+    BEGIN
+        SELECT CASE WHEN OLD.State = 'CANCELLED' THEN
+            RAISE (ABORT, 'Can not change state of CANCELLED task')
     END;
 END;
 

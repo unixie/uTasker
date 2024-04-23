@@ -2,6 +2,25 @@ Screen {
     layout: vertical;
 }
 
+WarningScreen {
+    align: center middle;
+}
+#WarningScreenContent {
+    width: 50;
+    height: 7;
+    grid-size: 1 2;
+    border: solid $primary;
+}
+#WarningScreenContent > Label {
+    height: 1fr;
+    width: 1fr;
+    content-align: center top;
+    color: $secondary;
+}
+#WarningScreenContent > Button {
+    width: 100%;
+}
+
 Button {
     margin: 0 6;
 }

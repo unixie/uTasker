@@ -14,10 +14,10 @@ from database import STATES, RECORD_FIELD_NAMES
 from rich.console import RenderableType
 from textual import on
 from textual.app import App, ComposeResult
-from textual.screen import Screen
+from textual.screen import Screen, ModalScreen
 from textual.binding import Binding
 from textual.coordinate import Coordinate
-from textual.containers import Horizontal, Vertical, Container
+from textual.containers import Horizontal, Vertical, Container, Grid
 from textual.widgets import Header, Footer
 from textual.widgets import Rule
 from textual.widgets import DataTable
@@ -27,6 +27,8 @@ from textual.widgets import TextArea
 from textual.widgets import RadioSet, RadioButton
 from textual.widgets import Checkbox
 from textual.widgets import Static
+from textual.widgets import Label
+
 
 # Order to display Record fields in DataTable columns
 COLUMNS = MappingProxyType(dict(zip(RECORD_FIELD_NAMES, range(len(RECORD_FIELD_NAMES)))))
@@ -158,6 +160,7 @@ class Backlog(Screen):
                                     value = str(buttons[idx].label))
             # Update underlying database from up to date Datatable
             act_update_row(table=table, row_idx=self.highlighted_row)
+
         elif event.button.id == 'Add':
             act_add_row(table=table)
             table.move_cursor(row=table.row_count - 1)
@@ -182,6 +185,18 @@ class TimeSpent(Static):
     def set_already_spent(self, initial):
         self.already_spent = initial
         self.update(str(self.already_spent))
+
+
+class WarningScreen(ModalScreen):
+    def compose(self) -> ComposeResult:
+        yield Grid(
+            Label("Can't change state of DONE or CANCELLED Task", disabled=True),
+            Button.warning("Got It"),
+            id="WarningScreenContent",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.app.pop_screen()
 
 
 class Workbench(Screen):
@@ -260,7 +275,10 @@ class Workbench(Screen):
         table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
                                 value = STATES(str(buttons[idx].label)))
         # Update underlying database from up to date Datatable
-        act_update_row(table=table, row_idx=self.highlighted_row)
+        try:
+            act_update_row(table=table, row_idx=self.highlighted_row)
+        except db.sqlite3.IntegrityError:
+            self.app.push_screen(WarningScreen())
 
     @on(Button.Pressed, "#inc")
     def inc(self):

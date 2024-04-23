@@ -1,3 +1,4 @@
+from ._database import sqlite3
 from ._database import Record
 from ._database import STATES
 from ._database import RECORD_FIELD_NAMES
