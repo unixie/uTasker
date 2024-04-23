@@ -24,16 +24,18 @@ INSERT OR IGNORE INTO States (StateName)
         ('CANCELLED')
 ;
 
--- Epics is a reference table
-CREATE TABLE IF NOT EXISTS Epics (
-    EpicName   TEXT NOT NULL UNIQUE
+-- Categories is a reference table
+CREATE TABLE IF NOT EXISTS Categories (
+    Category   TEXT NOT NULL UNIQUE
 );
 -- Fill
-INSERT OR IGNORE INTO Epics (EpicName)
+INSERT OR IGNORE INTO Categories (Category)
     VALUES
         ('-'),
         ('Feature'),
-        ('Fix')
+        ('Fix'),
+        ('Document'),
+        ('Test')
 ;
 
 
@@ -41,7 +43,7 @@ INSERT OR IGNORE INTO Epics (EpicName)
 CREATE TABLE IF NOT EXISTS Tasks (
     ID          INTEGER PRIMARY KEY,
     State       TEXT NOT NULL DEFAULT 'BACKLOG',
-    Epic        TEXT NOT NULL DEFAULT '-',
+    Category    TEXT NOT NULL DEFAULT '-',
     Title       TEXT NOT NULL DEFAULT 'New Task',
     Points      INTEGER CHECK (Points > 0) DEFAULT 1,
     TimeSpent   REAL DEFAULT 0,
@@ -50,8 +52,8 @@ CREATE TABLE IF NOT EXISTS Tasks (
     REFERENCES States (StateName)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
-    FOREIGN KEY (Epic)
-    REFERENCES Epics (EpicName)
+    FOREIGN KEY (Category)
+    REFERENCES Categories (Category)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
 );
@@ -74,14 +76,15 @@ END;
 
 
 -- Workbench is a dynamic view
-CREATE VIEW IF NOT EXISTS Sprint AS
+CREATE VIEW IF NOT EXISTS Active AS
     SELECT
         ID,
         State,
+        Category,
         Title,
-        Details,
         Points,
-        TimeSpent
+        TimeSpent,
+        Details
     FROM
         Tasks
     WHERE
@@ -90,16 +93,15 @@ CREATE VIEW IF NOT EXISTS Sprint AS
         State
 ;
 -- Propagate updates from within view
-CREATE TRIGGER IF NOT EXISTS UpdateSprintState
-    INSTEAD OF UPDATE OF State ON Sprint
+CREATE TRIGGER IF NOT EXISTS UpdateActiveState
+    INSTEAD OF UPDATE OF State ON Active
     BEGIN
         UPDATE Tasks SET State = NEW.State
         WHERE ID = NEW.ID;
     END
 ;
-
-CREATE TRIGGER IF NOT EXISTS IncreaseSprintTimeSpent
-    INSTEAD OF UPDATE OF TimeSpent ON Sprint
+CREATE TRIGGER IF NOT EXISTS IncreaseActiveTimeSpent
+    INSTEAD OF UPDATE OF TimeSpent ON Active
     BEGIN
         UPDATE Tasks SET TimeSpent = TimeSpent + NEW.TimeSpent
         WHERE TaskID = NEW.ID;

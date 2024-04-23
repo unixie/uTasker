@@ -46,7 +46,7 @@ class Record:
     """Record of a task"""
     ID : int
     State : STATES = STATES.default()
-    Epic : str = "-"
+    Category : str = "-"
     Title : str = "New Task"
     Points : int = 1
     TimeSpent : float = 0.0
@@ -93,7 +93,7 @@ def _set_record(
     UPDATE Tasks
     SET
         State = ?,
-        Epic = ?,
+        Category = ?,
         Title = ?,
         Points = ?,
         TimeSpent = ?,
@@ -149,21 +149,21 @@ def _load(
 def _store():
     _CON.close()
 
-def get_epics() -> set[str]:
+def get_categories() -> set[str]:
     cur = _CON.cursor()
-    res = cur.execute("SELECT * FROM Epics;")
+    res = cur.execute("SELECT * FROM Categories;")
     row = res.fetchall()
     return {x[0] for x in row}
 
-def update_epics(
+def update_categories(
         live : set[str]
 ) -> None:
-    stored = get_epics()
+    stored = get_categories()
     assert stored <= live
     additions = live - stored
     if len(additions) > 0:
         cur = _CON.cursor()
-        cmd = "INSERT INTO Epics (EpicName) VALUES (?)"
+        cmd = "INSERT INTO Categories (Category) VALUES (?)"
         cur.executemany(cmd, [(s,) for s in additions])
 
 

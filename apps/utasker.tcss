@@ -65,7 +65,7 @@ $left_side: 20;
     width: $left_side;
 }
 
-#HEpics {
+#HCategories {
     width: $left_side;
 }
 

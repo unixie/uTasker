@@ -37,7 +37,7 @@ COLUMN_WIDTHS = MappingProxyType(dict(
         [
             5,      # ID
             9,      # State
-            10,     # Epic
+            10,     # Category
             33,     # Title
             None,   # Points
             None,   # TimeSpent
@@ -63,7 +63,7 @@ def act_clone_row(
     clone = table.get_row_at(row_idx)
     clone_rec = db.new_record()
     clone_rec.Title = "Clone of " + clone[COLUMNS["Title"]]
-    clone_rec.Epic = clone[COLUMNS["Epic"]]
+    clone_rec.Category = clone[COLUMNS["Category"]]
     clone_rec.Points = clone[COLUMNS["Points"]]
     clone_rec.Details = clone[COLUMNS["Details"]]
     db.set_record(clone_rec)
@@ -76,7 +76,7 @@ def act_update_row(
     row = table.get_row_at(row_idx)
     updated = db.get_record(row[COLUMNS["ID"]])
     updated.State       = row[COLUMNS["State"]]
-    updated.Epic        = row[COLUMNS["Epic"]]
+    updated.Category    = row[COLUMNS["Category"]]
     updated.Title       = row[COLUMNS["Title"]]
     updated.Points      = row[COLUMNS["Points"]]
     updated.TimeSpent   = row[COLUMNS["TimeSpent"]]
@@ -96,7 +96,7 @@ class Backlog(Screen):
             with Horizontal():
                 with Vertical(id="TaskDetailsLeft"):
                     yield Input(placeholder="Points", classes="HBorder", id="HPoints")
-                    yield RadioSet(*sorted(db.get_epics()), classes="HBorder", id="HEpics")
+                    yield RadioSet(*sorted(db.get_categories()), classes="HBorder", id="HCategories")
                     yield Checkbox(STATES.UPCOMING.name, id="HCheck")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
@@ -112,7 +112,7 @@ class Backlog(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Points", "Epic", "Title", "Details"]):
+        for e,t in zip(element, ["Points", "Category", "Title", "Details"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -134,9 +134,9 @@ class Backlog(Screen):
         self.query_one("#HCheck").value = (record[COLUMNS["State"]] == STATES.UPCOMING)
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
         self.query_one("#HDetails").text = record[COLUMNS["Details"]]
-        radioset = self.query_one("#HEpics")
+        radioset = self.query_one("#HCategories")
         buttons = list(radioset.query(RadioButton))
-        idx = sorted(db.get_epics()).index(record[COLUMNS["Epic"]])
+        idx = sorted(db.get_categories()).index(record[COLUMNS["Category"]])
         buttons[idx].value = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -151,10 +151,10 @@ class Backlog(Screen):
                                  value=self.query_one("#HDetails").text)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
                                  value = STATES.UPCOMING if self.query_one("#HCheck").value else STATES.BACKLOG)
-            radioset = self.query_one("#HEpics")
+            radioset = self.query_one("#HCategories")
             buttons = list(radioset.query(RadioButton))
             idx = radioset.pressed_index
-            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Epic"]),
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Category"]),
                                     value = str(buttons[idx].label))
             # Update underlying database from up to date Datatable
             act_update_row(table=table, row_idx=self.highlighted_row)
