@@ -221,19 +221,40 @@ class Workbench(Screen):
                 yield Button("Tidy", variant="primary", id="Tidy")
 
     def on_mount(self) -> None:
-        table = self.query_one(".TaskList", DataTable)
-        table.border_title = "Workbench"
+        # Now that DOM is ready, cache the widgets for easier access later on
+        # Per screen, since each one may exhibit different widgets
+        widget_ids = [
+            "TimeSpent", "dec", "inc",
+            "TaskStates",
+            "HTitle",
+            "HDetails",
+            "Update",
+            "Tidy",
+        ]
+        self.widgets = {w: self.query_one("#"+w) for w in widget_ids}
+        self.table = self.query_one(".TaskList", DataTable)
+        # Design touches
+        self.table.border_title = "Workbench"
         for label,width in COLUMN_WIDTHS.items():
-            table.add_column(label=label,width=width)
+            self.table.add_column(label=label,width=width)
         element = self.query(".HBorder")
         for e,t in zip(element, ["Time Spent", "Title", "Details"]):
             e.border_title = t
 
+    def refresh_details(self) -> None:
+        # In case of an empty or refilled table
+        for w in self.widgets.values():
+            w.disabled = (self.table.row_count == 0)
+        if self.table.row_count == 0:
+            self.widgets["HTitle"].value = "Title"
+            self.widgets["TimeSpent"].set_already_spent(0)
+            self.widgets["HDetails"].text = "Details"
+
     def on_screen_resume(self) -> None:
-        table = self.query_one(".TaskList", DataTable)
-        table.clear()
+        self.table.clear()
         for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
-            table.add_row(*data.as_list(), key=data.ID)
+            self.table.add_row(*data.as_list(), key=data.ID)
+        self.refresh_details()
 
     @on(DataTable.RowHighlighted, ".TaskList")
     def fill_details(
@@ -244,11 +265,11 @@ class Workbench(Screen):
         table = message.control
         self.highlighted_row = message.cursor_row
         record = table.get_row_at(self.highlighted_row)
-        self.query_one("#TimeSpent").set_already_spent(record[COLUMNS["TimeSpent"]])
-        self.query_one("#HTitle").value = record[COLUMNS["Title"]]
-        self.query_one("#HDetails").text = record[COLUMNS["Details"]]
+        self.widgets["TimeSpent"].set_already_spent(record[COLUMNS["TimeSpent"]])
+        self.widgets["HTitle"].value = record[COLUMNS["Title"]]
+        self.widgets["HDetails"].text = record[COLUMNS["Details"]]
 
-        radioset = self.query_one("#TaskStates")
+        radioset = self.widgets["TaskStates"]
         buttons = list(radioset.query(RadioButton))
         idx = STATES.index(record[COLUMNS["State"]])
         buttons[idx].value = True
@@ -259,36 +280,35 @@ class Workbench(Screen):
         message: Button.Pressed
     ) -> None:
         message.stop()
-        table = self.query_one(".TaskList", DataTable)
         # Update TUI with new state, since tied to concrete elements
-        spent = float(str(self.query_one("#TimeSpent").renderable))
-        self.query_one("#TimeSpent").set_already_spent(spent)
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["TimeSpent"]),
+        spent = float(str(self.widgets["TimeSpent"].renderable))
+        self.widgets["TimeSpent"].set_already_spent(spent)
+        self.table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["TimeSpent"]),
                                 value=spent)
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Title"]),
-                                value=self.query_one("#HTitle").value)
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Details"]),
-                                value=self.query_one("#HDetails").text)
-        radioset = self.query_one("#TaskStates")
+        self.table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Title"]),
+                                value=self.widgets["HTitle"].value)
+        self.table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Details"]),
+                                value=self.widgets["HDetails"].text)
+        radioset = self.widgets["TaskStates"]
         buttons = list(radioset.query(RadioButton))
         idx = radioset.pressed_index
-        table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
+        self.table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
                                 value = STATES(str(buttons[idx].label)))
         # Update underlying database from up to date Datatable
         try:
-            act_update_row(table=table, row_idx=self.highlighted_row)
+            act_update_row(table=self.table, row_idx=self.highlighted_row)
         except db.sqlite3.IntegrityError:
             self.app.push_screen(WarningScreen())
 
     @on(Button.Pressed, "#inc")
     def inc(self):
-        points = self.query_one("#TimeSpent")
+        points = self.widgets["TimeSpent"]
         value = float(str(points.render())) + 0.5
         points.update(str(value))
 
     @on(Button.Pressed, "#dec")
     def dec(self):
-        points = self.query_one("#TimeSpent")
+        points = self.widgets["TimeSpent"]
         value = float(str(points.render())) - 0.5
         if not points.update(str(value)): self.app.bell()
 
@@ -298,10 +318,11 @@ class Workbench(Screen):
         message: Button.Pressed
     ) -> None:
         message.stop()
-        table = self.query_one(".TaskList", DataTable)
-        table.clear()
+        self.table.clear()
         for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
-            table.add_row(*data.as_list(), key=data.ID)
+            self.table.add_row(*data.as_list(), key=data.ID)
+        # Has the potential to clear the entire table
+        self.refresh_details()
 
 
 # --- Archive: Retired tasks -------------------------------------------------
