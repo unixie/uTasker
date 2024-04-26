@@ -2,6 +2,8 @@
 
 Micro task manager: command line, cross-platform, local storage.
 
+An etude for playing with sqlite and TUI development.
+
 _Still work-in-progress_
 
 ## Installation
@@ -35,16 +37,18 @@ Then execute `apps/utasker.py --help` for more instructions.
 
 ## Micro Manual
 
-Manages a table of tasks in a sqlite file that can be located anywhere you wish (**Tip**: place in a Dropbox directory for secure sharing and backup).
+Manages a table of tasks in a sqlite file that can be located anywhere you wish.
 
 ### Workflow
 
 - Backlog screen
   - Add new tasks
-  - Select UPCOMING which adds to Workbench screen
+  - Select UPCOMING to add to Workbench screen
 - Workbench screen
-  - Track the progress of tasks, change their state
-  - Move back to Backlog or send to Archive by DONE or CANCELLED
+  - Track the progress of tasks
+    - Time spent can be in whichever unit you want: hours, work-days, etc
+  - Move back to Backlog if expectations change (i.e. Points)
+  - Send to Archive by DONE or CANCELLED
 - Archive screen
   - See list of completed tasks
 
@@ -52,11 +56,10 @@ Manages a table of tasks in a sqlite file that can be located anywhere you wish 
 
 - Press **Update** for any change to take place
 - Super-simple Agile, retaining only the concept of Points and sort of Sprint (Workbench)
-- Once done, a Task cannot be revived, only cloned
+- Once completed, a Task cannot be revived, only cloned
 - Use database with external tools for analysis (Points to time, etc)
 
-## TODO
+### Usage Notes
 
-- [ ] Search for task
-- [ ] Epics
-- [ ] Milestones
+- Run without file to play around with the application; don't forget changes are not saved!
+- TIP: place database file in a Dropbox directory for secure sharing and backup
