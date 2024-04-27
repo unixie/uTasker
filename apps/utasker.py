@@ -112,7 +112,7 @@ class Backlog(Screen):
         table = self.query_one(".TaskList", DataTable)
         table.border_title = "Backlog"
         for label,width in COLUMN_WIDTHS.items():
-            table.add_column(label=label,width=width)
+            table.add_column(label=label,width=width,key=label)
         element = self.query(".HBorder")
         for e,t in zip(element, ["Points", "Category", "Title", "Details"]):
             e.border_title = t
@@ -169,6 +169,13 @@ class Backlog(Screen):
             table.move_cursor(row=table.row_count - 1)
         else:
             raise ValueError("Unknown button id")
+
+    @on(DataTable.HeaderSelected, ".TaskList")
+    def sort_by_column(
+        self,
+        message: DataTable.HeaderSelected
+    ) -> None:
+        message.data_table.sort(message.column_key)
 
 
 # --- Workbench: Tasks receiving attention -----------------------------------
@@ -236,7 +243,7 @@ class Workbench(Screen):
         # Design touches
         self.table.border_title = "Workbench"
         for label,width in COLUMN_WIDTHS.items():
-            self.table.add_column(label=label,width=width)
+            self.table.add_column(label=label,width=width,key=label)
         element = self.query(".HBorder")
         for e,t in zip(element, ["Time Spent", "Title", "Details"]):
             e.border_title = t
@@ -324,6 +331,13 @@ class Workbench(Screen):
         # Has the potential to clear the entire table
         self.refresh_details()
 
+    @on(DataTable.HeaderSelected, ".TaskList")
+    def sort_by_column(
+        self,
+        message: DataTable.HeaderSelected
+    ) -> None:
+        message.data_table.sort(message.column_key)
+
 
 # --- Archive: Retired tasks -------------------------------------------------
 class Archive(Screen):
@@ -346,7 +360,7 @@ class Archive(Screen):
         table = self.query_one(".TaskList", DataTable)
         table.border_title = "Archive"
         for label,width in COLUMN_WIDTHS.items():
-            table.add_column(label=label,width=width)
+            table.add_column(label=label,width=width,key=label)
         element = self.query(".HBorder")
         for e,t in zip(element, ["Title", "Details"]):
             e.border_title = t
@@ -373,6 +387,13 @@ class Archive(Screen):
         table = self.query_one(".TaskList", DataTable)
         act_clone_row(table=table, row_idx=self.highlighted_row)
         table.move_cursor(row=table.row_count - 1)
+
+    @on(DataTable.HeaderSelected, ".TaskList")
+    def sort_by_column(
+        self,
+        message: DataTable.HeaderSelected
+    ) -> None:
+        message.data_table.sort(message.column_key)
 
 
 # === TUI App ================================================================
