@@ -35,6 +35,7 @@ INSERT OR IGNORE INTO Categories (Category)
         ('Feature'),
         ('Fix'),
         ('Document'),
+        ('Refactor'),
         ('Test')
 ;
 
