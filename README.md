@@ -39,6 +39,14 @@ Then execute `apps/utasker.py --help` for more instructions.
 
 Manages a table of tasks in a sqlite file that can be located anywhere you wish.
 
+### Mental Model
+
+- Press **Update** for any change to take place
+- Super-simple Agile, retaining only the concept of Points and sort of Sprint (Workbench)
+- Once completed, a Task cannot be revived, only cloned
+- Use database with external tools for analysis (Points to time, etc)
+
+
 ### Workflow
 
 - Backlog screen
@@ -52,14 +60,9 @@ Manages a table of tasks in a sqlite file that can be located anywhere you wish.
 - Archive screen
   - See list of completed tasks
 
-### Mental Model
-
-- Press **Update** for any change to take place
-- Super-simple Agile, retaining only the concept of Points and sort of Sprint (Workbench)
-- Once completed, a Task cannot be revived, only cloned
-- Use database with external tools for analysis (Points to time, etc)
-
 ### Usage Notes
 
+- Click task table columns for simple sort
 - Run without file to play around with the application; don't forget changes are not saved!
 - TIP: place database file in a Dropbox directory for secure sharing and backup
+- Copy/Paste carefully, see [Textual FAQ](https://textual.textualize.io/FAQ/#how-can-i-select-and-copy-text-in-a-textual-app) for more details
