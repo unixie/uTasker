@@ -4,8 +4,6 @@
 
 # === Imports and Globals ====================================================
 from dataclasses import dataclass, asdict
-from enum import Enum
-import itertools
 import os.path
 from pathlib import Path
 import sqlite3
@@ -16,31 +14,6 @@ _SCHEMA_FILE = Path(Path(__file__).parent, "utasker.sql")
 # === Classes and Functions ==================================================
 
 # --- Schema Data Structures -------------------------------------------------
-class STATES(Enum):
-    """Possible states of a task"""
-    BACKLOG     = "BACKLOG"
-    UPCOMING    = "UPCOMING"
-    ACTIVE      = "ACTIVE"
-    REVIEW      = "REVIEW"
-    DONE        = "DONE"
-    CANCELLED   = "CANCELLED"
-
-    def __str__(self):
-        return self.name
-
-    @classmethod
-    def as_list(cls):
-        return [v.value for v in cls]
-
-    @classmethod
-    def index(cls, name):
-        _name = str(name) if isinstance(name, STATES) else name
-        return cls.as_list().index(_name)
-
-    @classmethod
-    def default(cls):
-        return cls.BACKLOG
-
 @dataclass(eq=False)
 class Record:
     """Record of a task"""
@@ -70,19 +43,19 @@ def record_factory(cursor, row):
 _CON = None
 _DCUR = None
 
-def _new_record() -> Record:
+def new_record() -> Record:
     _DCUR.execute("INSERT INTO Tasks DEFAULT VALUES;")
     res = _DCUR.execute("SELECT * FROM Tasks WHERE ID=last_insert_rowid();")
     _CON.commit()
     return res.fetchall()[0]
 
-def _get_record(
+def get_record(
         id : int
 ) -> Record:
     res = _DCUR.execute("SELECT * FROM Tasks WHERE ID=?;", (id,))
     return res.fetchall()[0]
 
-def _set_record(
+def set_record(
         rec : Record
 ) -> None:
     reclist = rec.as_list()
@@ -104,8 +77,8 @@ def _set_record(
     (*reclist[1:], reclist[0]))  # TODO: nicer to have all in order?
     _CON.commit()
 
-def _view_dataset(
-        filter : list[STATES] = []
+def view_dataset(
+        filter : list[str] = []
 ) -> list[Record]:
     if len(filter) > 0:
         filter = str([s for s in filter])[1:-1]
@@ -116,7 +89,7 @@ def _view_dataset(
     res = _DCUR.execute(cmd)
     return res.fetchall()
 
-def _load(
+def load(
         dbfile : str
 ) -> None:
     global _CON
@@ -146,7 +119,7 @@ def _load(
     else:
         pass
 
-def _store():
+def store():
     _CON.close()
 
 def get_categories() -> set[str]:
@@ -166,76 +139,8 @@ def update_categories(
         cmd = "INSERT INTO Categories (Category) VALUES (?)"
         cur.executemany(cmd, [(s,) for s in additions])
 
-def get_states() -> set[str]:
+def get_states() -> tuple[str]:
     cur = _CON.cursor()
     res = cur.execute("SELECT * FROM States;")
     row = res.fetchall()
     return tuple([x[0] for x in row])
-
-
-# --- Simple backend for development instead of proper DB --------------------
-_DATASET = []
-_gen_ID = itertools.count(start=1)
-
-def _new_record_simple() -> Record:
-    rec = Record(next(_gen_ID))
-    _DATASET.append(rec)
-    return rec
-
-def _get_record_simple(
-        id : int
-) -> Record:
-    rec = [r for r in _DATASET if r.ID == id]
-    assert(len(rec) == 1)
-    return rec[0]
-
-def _set_record_simple(
-        rec : Record
-) -> None:
-    _dest = _get_record_simple(rec.ID)
-    _DATASET[_DATASET.index(_dest)] = rec
-
-def _view_dataset_simple(
-        filter : list[STATES] = []
-) -> list[Record]:
-    if len(filter) > 0:
-        view = [r for r in _DATASET if r.State in filter]
-    else:
-        view = _DATASET
-    return view
-
-def _load_simple(
-        dbfile : str
-) -> None:
-    global _DATASET
-    _DATASET = [
-        Record(next(_gen_ID), Title="Tasker1", Points=3, Description="First one"),
-        Record(next(_gen_ID), Title="Tasker2", Points=2, Description="Second one"),
-        Record(next(_gen_ID), Title="Tasker3", Points=1, Description="Third one"),
-    ]
-
-def _store_simple():
-    pass
-
-
-# === Database API ===========================================================
-def select_api(use_simple=False):
-    global new_record, get_record, set_record, view_dataset
-    global load, store
-    if use_simple:
-        new_record      = _new_record_simple
-        get_record      = _get_record_simple
-        set_record      = _set_record_simple
-        view_dataset    = _view_dataset_simple
-        load            = _load_simple
-        store           = _store_simple
-        print("simple")
-    else:
-        new_record      = _new_record
-        get_record      = _get_record
-        set_record      = _set_record
-        view_dataset    = _view_dataset
-        load            = _load
-        store           = _store
-
-select_api()
