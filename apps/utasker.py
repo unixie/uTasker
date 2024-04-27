@@ -8,7 +8,6 @@ from types import MappingProxyType
 
 # Database
 import database as db
-from database import STATES, RECORD_FIELD_NAMES
 
 # TUI
 from rich.console import RenderableType
@@ -31,11 +30,11 @@ from textual.widgets import Label
 
 
 # Order to display Record fields in DataTable columns
-COLUMNS = MappingProxyType(dict(zip(RECORD_FIELD_NAMES, range(len(RECORD_FIELD_NAMES)))))
+COLUMNS = MappingProxyType(dict(zip(db.RECORD_FIELD_NAMES, range(len(db.RECORD_FIELD_NAMES)))))
 
 # Manually unfold for TUI
 COLUMN_WIDTHS = MappingProxyType(dict(
-    zip(RECORD_FIELD_NAMES,
+    zip(db.RECORD_FIELD_NAMES,
         [
             5,      # ID
             9,      # State
@@ -99,7 +98,7 @@ class Backlog(Screen):
                 with Vertical(id="TaskDetailsLeft"):
                     yield Input(placeholder="Points", classes="HBorder", id="HPoints")
                     yield RadioSet(*sorted(db.get_categories()), classes="HBorder", id="HCategories")
-                    yield Checkbox(STATES.UPCOMING.name, id="HCheck")
+                    yield Checkbox("UPCOMING", id="HCheck")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
                     yield TextArea(classes="HBorder", id="HDetails")
@@ -120,7 +119,7 @@ class Backlog(Screen):
     def on_screen_resume(self) -> None:
         table = self.query_one(".TaskList", DataTable)
         table.clear()
-        for data in db.view_dataset([STATES.BACKLOG, STATES.UPCOMING]):
+        for data in db.view_dataset(["BACKLOG", "UPCOMING"]):
             table.add_row(*data.as_list(), key=data.ID)
 
     @on(DataTable.RowHighlighted, ".TaskList")
@@ -133,7 +132,7 @@ class Backlog(Screen):
         self.highlighted_row = message.cursor_row
         record = table.get_row_at(self.highlighted_row)
         self.query_one("#HPoints").value = str(record[COLUMNS["Points"]])
-        self.query_one("#HCheck").value = (record[COLUMNS["State"]] == STATES.UPCOMING)
+        self.query_one("#HCheck").value = (record[COLUMNS["State"]] == "UPCOMING")
         self.query_one("#HTitle").value = record[COLUMNS["Title"]]
         self.query_one("#HDetails").text = record[COLUMNS["Details"]]
         radioset = self.query_one("#HCategories")
@@ -152,7 +151,7 @@ class Backlog(Screen):
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Details"]),
                                  value=self.query_one("#HDetails").text)
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
-                                 value = STATES.UPCOMING if self.query_one("#HCheck").value else STATES.BACKLOG)
+                                 value = "UPCOMING" if self.query_one("#HCheck").value else "BACKLOG")
             radioset = self.query_one("#HCategories")
             buttons = list(radioset.query(RadioButton))
             idx = radioset.pressed_index
@@ -219,7 +218,7 @@ class Workbench(Screen):
                         yield TimeSpent(markup=False, id="TimeSpent")
                         yield Button("-0.5", id="dec")
                         yield Button("+0.5", id="inc")
-                    yield RadioSet(*STATES.as_list(), id="TaskStates")
+                    yield RadioSet(*db.get_states(), id="TaskStates")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
                     yield TextArea(classes="HBorder", id="HDetails")
@@ -259,7 +258,7 @@ class Workbench(Screen):
 
     def on_screen_resume(self) -> None:
         self.table.clear()
-        for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
+        for data in db.view_dataset(["ACTIVE", "REVIEW", "UPCOMING"]):
             self.table.add_row(*data.as_list(), key=data.ID)
         self.refresh_details()
 
@@ -278,7 +277,7 @@ class Workbench(Screen):
 
         radioset = self.widgets["TaskStates"]
         buttons = list(radioset.query(RadioButton))
-        idx = STATES.index(record[COLUMNS["State"]])
+        idx = db.get_states().index(record[COLUMNS["State"]])
         buttons[idx].value = True
 
     @on(Button.Pressed, "#Update")
@@ -300,7 +299,7 @@ class Workbench(Screen):
         buttons = list(radioset.query(RadioButton))
         idx = radioset.pressed_index
         self.table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["State"]),
-                                value = STATES(str(buttons[idx].label)))
+                                value = str(buttons[idx].label))
         # Update underlying database from up to date Datatable
         try:
             act_update_row(table=self.table, row_idx=self.highlighted_row)
@@ -326,7 +325,7 @@ class Workbench(Screen):
     ) -> None:
         message.stop()
         self.table.clear()
-        for data in db.view_dataset([STATES.ACTIVE, STATES.REVIEW, STATES.UPCOMING]):
+        for data in db.view_dataset(["ACTIVE", "REVIEW", "UPCOMING"]):
             self.table.add_row(*data.as_list(), key=data.ID)
         # Has the potential to clear the entire table
         self.refresh_details()
@@ -368,7 +367,7 @@ class Archive(Screen):
     def on_screen_resume(self) -> None:
         table = self.query_one(".TaskList", DataTable)
         table.clear()
-        for data in db.view_dataset([STATES.CANCELLED, STATES.DONE]):
+        for data in db.view_dataset(["CANCELLED", "DONE"]):
             table.add_row(*data.as_list(), key=data.ID)
 
     @on(DataTable.RowHighlighted, ".TaskList")

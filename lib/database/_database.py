@@ -45,7 +45,7 @@ class STATES(Enum):
 class Record:
     """Record of a task"""
     ID : int
-    State : STATES = STATES.default()
+    State : str = "BACKLOG"
     Category : str = "-"
     Title : str = "New Task"
     Points : int = 1
@@ -108,7 +108,7 @@ def _view_dataset(
         filter : list[STATES] = []
 ) -> list[Record]:
     if len(filter) > 0:
-        filter = str([s.value for s in filter])[1:-1]
+        filter = str([s for s in filter])[1:-1]
         filter = "(" + filter + ")"
         cmd = "SELECT * FROM TASKS WHERE State IN {}".format(filter)
     else:
@@ -165,6 +165,12 @@ def update_categories(
         cur = _CON.cursor()
         cmd = "INSERT INTO Categories (Category) VALUES (?)"
         cur.executemany(cmd, [(s,) for s in additions])
+
+def get_states() -> set[str]:
+    cur = _CON.cursor()
+    res = cur.execute("SELECT * FROM States;")
+    row = res.fetchall()
+    return tuple([x[0] for x in row])
 
 
 # --- Simple backend for development instead of proper DB --------------------
