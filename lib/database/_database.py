@@ -63,8 +63,6 @@ def set_record(
         rec : Record
 ) -> None:
     reclist = rec.as_list()
-    if type(reclist[1]) != str:  # FIXME: ugly kludge
-        reclist[1] = reclist[1].value
     _DCUR.execute(
     """
     UPDATE Tasks

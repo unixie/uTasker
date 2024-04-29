@@ -37,13 +37,13 @@ COLUMN_WIDTHS = MappingProxyType(dict(
     zip(db.RECORD_FIELD_NAMES,
         [
             5,      # ID
-            9,      # State
-            10,     # Priority
-            10,     # Category
-            33,     # Title
-            None,   # Points
-            None,   # TimeSpent
-            60,     # Details
+            8,      # State
+            8,      # Priority
+            8,      # Category
+            65,     # Title
+            6,      # Points
+            10,     # TimeSpent
+            0,      # Details
         ]
     )
 ))
@@ -461,8 +461,10 @@ if __name__ == "__main__":
 
     # --- Argument validation ------------------------------------------------
     args = parser.parse_args()
+    if args.file is not None:
+        args.file = os.path.expanduser(args.file)
 
     # --- Application --------------------------------------------------------
-    db.load(os.path.expanduser(args.file))
+    db.load(args.file)
     app = uTaskerApp()
     app.run()
