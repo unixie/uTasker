@@ -2,9 +2,6 @@
 
 Micro task manager: command line, cross-platform, local storage.
 
-An etude for playing with sqlite and TUI development.
-
-_Still work-in-progress_
 
 ## Installation
 
