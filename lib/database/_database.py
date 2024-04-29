@@ -19,6 +19,7 @@ class Record:
     """Record of a task"""
     ID : int
     State : str = "BACKLOG"
+    Priority : str = "Low"
     Category : str = "-"
     Title : str = "New Task"
     Points : int = 1
@@ -69,6 +70,7 @@ def set_record(
     UPDATE Tasks
     SET
         State = ?,
+        Priority = ?,
         Category = ?,
         Title = ?,
         Points = ?,
@@ -106,17 +108,18 @@ def load(
     _DCUR = _CON.cursor()
     _DCUR.row_factory = record_factory
 
-    def _prepare_db() -> None:
+    def _prepare_db(add_examples : bool = False) -> None:
         with open(_SCHEMA_FILE, "rt") as file:
             schema_str = file.read()
         cur = _CON.cursor()  # default cursor for general operations
         cur.executescript(schema_str)
-        for i in range(3):  # TODO: remove eventually
-            res = _DCUR.execute("""INSERT INTO Tasks DEFAULT VALUES;""")
+        if add_examples:
+            for i in range(3):
+                res = _DCUR.execute("""INSERT INTO Tasks DEFAULT VALUES;""")
 
     # One time preparation
     if dbfile is None:
-        _prepare_db()
+        _prepare_db(add_examples = True)
     elif os.path.getsize(dbfile) == 0:  # file already exists
         _prepare_db()
     else:
@@ -145,5 +148,11 @@ def update_categories(
 def get_states() -> tuple[str]:
     cur = _CON.cursor()
     res = cur.execute("SELECT * FROM States;")
+    row = res.fetchall()
+    return tuple([x[0] for x in row])
+
+def get_priorities() -> tuple[str]:
+    cur = _CON.cursor()
+    res = cur.execute("SELECT * FROM Priorities;")
     row = res.fetchall()
     return tuple([x[0] for x in row])

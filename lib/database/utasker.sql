@@ -39,11 +39,24 @@ INSERT OR IGNORE INTO Categories (Category)
         ('Test')
 ;
 
+-- Priorities is a reference table
+CREATE TABLE IF NOT EXISTS Priorities (
+    Priority   TEXT NOT NULL UNIQUE
+);
+-- Fill
+INSERT OR IGNORE INTO Priorities (Priority)
+    VALUES
+        ('High'),
+        ('Middle'),
+        ('Low')
+;
+
 
 -- Tasks is the foundation table
 CREATE TABLE IF NOT EXISTS Tasks (
     ID          INTEGER PRIMARY KEY,
     State       TEXT NOT NULL DEFAULT 'BACKLOG',
+    Priority    TEXT NOT NULL DEFAULT 'Low',
     Category    TEXT NOT NULL DEFAULT '-',
     Title       TEXT NOT NULL DEFAULT 'New Task',
     Points      INTEGER CHECK (Points > 0) DEFAULT 1,
@@ -51,6 +64,10 @@ CREATE TABLE IF NOT EXISTS Tasks (
     Details     TEXT DEFAULT 'TBA',
     FOREIGN KEY (State)
     REFERENCES States (StateName)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+    FOREIGN KEY (Priority)
+    REFERENCES Priorities (Priority)
         ON DELETE RESTRICT
         ON UPDATE CASCADE
     FOREIGN KEY (Category)
@@ -89,6 +106,7 @@ CREATE VIEW IF NOT EXISTS Active AS
     SELECT
         ID,
         State,
+        Priority,
         Category,
         Title,
         Points,

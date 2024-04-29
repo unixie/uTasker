@@ -38,6 +38,7 @@ COLUMN_WIDTHS = MappingProxyType(dict(
         [
             5,      # ID
             9,      # State
+            10,     # Priority
             10,     # Category
             33,     # Title
             None,   # Points
@@ -65,6 +66,7 @@ def act_clone_row(
     clone_rec = db.new_record()
     clone_rec.Title = "Clone of " + clone[COLUMNS["Title"]]
     clone_rec.Category = clone[COLUMNS["Category"]]
+    clone_rec.Priority = clone[COLUMNS["Priority"]]
     clone_rec.Points = clone[COLUMNS["Points"]]
     clone_rec.Details = clone[COLUMNS["Details"]]
     db.set_record(clone_rec)
@@ -78,6 +80,7 @@ def act_update_row(
     updated = db.get_record(row[COLUMNS["ID"]])
     updated.State       = row[COLUMNS["State"]]
     updated.Category    = row[COLUMNS["Category"]]
+    updated.Priority    = row[COLUMNS["Priority"]]
     updated.Title       = row[COLUMNS["Title"]]
     updated.Points      = row[COLUMNS["Points"]]
     updated.TimeSpent   = row[COLUMNS["TimeSpent"]]
@@ -98,6 +101,7 @@ class Backlog(Screen):
                 with Vertical(id="TaskDetailsLeft"):
                     yield Input(placeholder="Points", classes="HBorder", id="HPoints")
                     yield RadioSet(*sorted(db.get_categories()), classes="HBorder", id="HCategories")
+                    yield RadioSet(*db.get_priorities(), classes="HBorder", id="HPriorities")
                     yield Checkbox("UPCOMING", id="HCheck")
                 with Vertical(id="TaskDetailsRight"):
                     yield Input(placeholder="Title", classes="HBorder", id="HTitle")
@@ -113,7 +117,7 @@ class Backlog(Screen):
         for label,width in COLUMN_WIDTHS.items():
             table.add_column(label=label,width=width,key=label)
         element = self.query(".HBorder")
-        for e,t in zip(element, ["Points", "Category", "Title", "Details"]):
+        for e,t in zip(element, ["Points", "Category", "Priority", "Title", "Details"]):
             e.border_title = t
 
     def on_screen_resume(self) -> None:
@@ -139,6 +143,10 @@ class Backlog(Screen):
         buttons = list(radioset.query(RadioButton))
         idx = sorted(db.get_categories()).index(record[COLUMNS["Category"]])
         buttons[idx].value = True
+        radioset = self.query_one("#HPriorities")
+        buttons = list(radioset.query(RadioButton))
+        idx = db.get_priorities().index(record[COLUMNS["Priority"]])
+        buttons[idx].value = True
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         table = self.query_one(".TaskList", DataTable)
@@ -156,6 +164,11 @@ class Backlog(Screen):
             buttons = list(radioset.query(RadioButton))
             idx = radioset.pressed_index
             table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Category"]),
+                                    value = str(buttons[idx].label))
+            radioset = self.query_one("#HPriorities")
+            buttons = list(radioset.query(RadioButton))
+            idx = radioset.pressed_index
+            table.update_cell_at(coordinate=Coordinate(row=self.highlighted_row, column=COLUMNS["Priority"]),
                                     value = str(buttons[idx].label))
             # Update underlying database from up to date Datatable
             act_update_row(table=table, row_idx=self.highlighted_row)
@@ -421,6 +434,7 @@ class uTaskerApp(App):
 # === Command Line Interface =================================================
 if __name__ == "__main__":
     import argparse
+    import os.path
 
     desc = __doc__ + '''\n
     '''
@@ -449,6 +463,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # --- Application --------------------------------------------------------
-    db.load(args.file)
+    db.load(os.path.expanduser(args.file))
     app = uTaskerApp()
     app.run()
