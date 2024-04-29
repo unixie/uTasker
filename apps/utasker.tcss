@@ -40,7 +40,7 @@ Rule {
     border-title-style: bold;
 }
 .TaskDetails {
-    height: 1fr;
+    height: 26;
 }
 .BottomButtons {
     height: 5;

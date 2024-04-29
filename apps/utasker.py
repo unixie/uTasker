@@ -37,7 +37,7 @@ COLUMN_WIDTHS = MappingProxyType(dict(
     zip(db.RECORD_FIELD_NAMES,
         [
             5,      # ID
-            8,      # State
+            10,     # State
             8,      # Priority
             8,      # Category
             65,     # Title
