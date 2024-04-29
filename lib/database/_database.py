@@ -28,6 +28,9 @@ class Record:
     def as_list(self):
         return list(self.__dict__.values())
 
+    def as_dict(self):
+        return asdict(self)
+
 def _get_field_names_of_Record() -> list[str]:
     obj = Record(0)
     return(list(asdict(obj).keys()))
